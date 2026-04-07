@@ -94,8 +94,9 @@ In most apps, prefer the `subscription.remove()` returned by
 
 ## Notes
 
-- Android only
-- This package does not support iOS
+- Android only for native OTP functionality
+- Safe to import on iOS, but OTP methods are no-ops there
+- This package does not support iOS OTP retrieval
 - SMS User Consent can work without app-hash formatting
 - SMS Retriever requires the OTP SMS to include the app hash
 - If you only call `startSmsRetriever()`, your backend SMS must follow Google's

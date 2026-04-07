@@ -5,18 +5,23 @@ const LINKING_ERROR =
   Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
   '- You rebuilt the app after installing the package\n';
 
-const NativeOtpModule = NativeModules.AndroidOtpVerificationApi
-  ? NativeModules.AndroidOtpVerificationApi
-  : new Proxy(
-      {},
-      {
-        get() {
-          throw new Error(LINKING_ERROR);
-        },
-      }
-    );
+const NativeOtpModule =
+  Platform.OS === 'android'
+    ? NativeModules.AndroidOtpVerificationApi
+      ? NativeModules.AndroidOtpVerificationApi
+      : new Proxy(
+          {},
+          {
+            get() {
+              throw new Error(LINKING_ERROR);
+            },
+          }
+        )
+    : null;
 
-const emitter = new NativeEventEmitter(NativeOtpModule);
+const emitter = NativeOtpModule
+  ? new NativeEventEmitter(NativeOtpModule)
+  : null;
 const listenerSubscriptions = new Set<{
   successSubscription: { remove(): void };
   errorSubscription: { remove(): void };
@@ -30,6 +35,12 @@ export const EmitterMessages = {
 export function listenForVerificationSms(
   callback: (error: Error | null, message: string | null) => void
 ) {
+  if (!emitter) {
+    return {
+      remove() {},
+    };
+  }
+
   const successSubscription = emitter.addListener(
     EmitterMessages.SMS_RECEIVED,
     (...args: readonly unknown[]) => {
@@ -83,6 +94,10 @@ export function startSmsUserConsent(
 }
 
 export function removeVerificationListeners() {
+  if (!emitter) {
+    return;
+  }
+
   listenerSubscriptions.forEach(
     ({ successSubscription, errorSubscription }) => {
       successSubscription.remove();
