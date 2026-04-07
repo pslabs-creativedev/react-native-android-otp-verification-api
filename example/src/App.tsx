@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
-  receiveVerificationSMS,
-  removeAllListeners,
+  listenForVerificationSms,
   startSmsRetriever,
   startSmsUserConsent,
 } from 'react-native-android-otp-verification-api';
@@ -13,7 +12,7 @@ export default function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const subscription = receiveVerificationSMS((err, sms) => {
+    const subscription = listenForVerificationSms((err, sms) => {
       if (err) {
         setError(err.message);
         return;
@@ -25,13 +24,12 @@ export default function App() {
 
       setMessage(sms);
       const match = /\b(\d{6})\b/.exec(sms);
-      setOtp(match ? match[1] : '');
+      setOtp(match?.[1] ?? '');
       setError('');
     });
 
     return () => {
       subscription?.remove?.();
-      removeAllListeners();
     };
   }, []);
 
@@ -43,7 +41,10 @@ export default function App() {
       </Text>
 
       <View style={styles.buttonGroup}>
-        <Button title="Start User Consent" onPress={() => startSmsUserConsent()} />
+        <Button
+          title="Start User Consent"
+          onPress={() => startSmsUserConsent()}
+        />
       </View>
 
       <View style={styles.buttonGroup}>

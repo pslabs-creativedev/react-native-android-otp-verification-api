@@ -17,28 +17,45 @@ const NativeOtpModule = NativeModules.AndroidOtpVerificationApi
     );
 
 const emitter = new NativeEventEmitter(NativeOtpModule);
+const listenerSubscriptions = new Set<{
+  successSubscription: { remove(): void };
+  errorSubscription: { remove(): void };
+}>();
 
 export const EmitterMessages = {
   SMS_RECEIVED: 'SMS_RECEIVED',
   SMS_ERROR: 'SMS_ERROR',
 } as const;
 
-export function receiveVerificationSMS(
+export function listenForVerificationSms(
   callback: (error: Error | null, message: string | null) => void
 ) {
   const successSubscription = emitter.addListener(
     EmitterMessages.SMS_RECEIVED,
-    (message: string) => callback(null, message)
+    (...args: readonly unknown[]) => {
+      const message =
+        typeof args[0] === 'string' ? args[0] : String(args[0] ?? '');
+      callback(null, message);
+    }
   );
   const errorSubscription = emitter.addListener(
     EmitterMessages.SMS_ERROR,
-    (error: string) => callback(new Error(error), null)
+    (...args: readonly unknown[]) => {
+      const error =
+        typeof args[0] === 'string'
+          ? args[0]
+          : String(args[0] ?? 'Unknown error');
+      callback(new Error(error), null);
+    }
   );
+  const subscriptions = { successSubscription, errorSubscription };
+  listenerSubscriptions.add(subscriptions);
 
   return {
     remove() {
       successSubscription.remove();
       errorSubscription.remove();
+      listenerSubscriptions.delete(subscriptions);
     },
   };
 }
@@ -65,14 +82,25 @@ export function startSmsUserConsent(
   );
 }
 
-export function removeAllListeners() {
-  emitter.removeAllListeners(EmitterMessages.SMS_RECEIVED);
-  emitter.removeAllListeners(EmitterMessages.SMS_ERROR);
+export function removeVerificationListeners() {
+  listenerSubscriptions.forEach(
+    ({ successSubscription, errorSubscription }) => {
+      successSubscription.remove();
+      errorSubscription.remove();
+    }
+  );
+  listenerSubscriptions.clear();
 }
 
+// Backward-compatible aliases for the previous public API.
+export const receiveVerificationSMS = listenForVerificationSms;
+export const removeAllListeners = removeVerificationListeners;
+
 export default {
-  receiveVerificationSMS,
+  listenForVerificationSms,
   startSmsRetriever,
   startSmsUserConsent,
+  removeVerificationListeners,
+  receiveVerificationSMS,
   removeAllListeners,
 };

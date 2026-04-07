@@ -30,10 +30,9 @@ npx react-native run-android
 import React, { useEffect, useState } from 'react';
 import { Button, Text, View } from 'react-native';
 import {
-  receiveVerificationSMS,
+  listenForVerificationSms,
   startSmsRetriever,
   startSmsUserConsent,
-  removeAllListeners,
 } from 'react-native-android-otp-verification-api';
 
 export default function Example() {
@@ -42,7 +41,7 @@ export default function Example() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const subscription = receiveVerificationSMS((err, sms) => {
+    const subscription = listenForVerificationSms((err, sms) => {
       if (err) {
         setError(err.message);
         return;
@@ -59,7 +58,6 @@ export default function Example() {
 
     return () => {
       subscription?.remove?.();
-      removeAllListeners();
     };
   }, []);
 
@@ -77,14 +75,22 @@ export default function Example() {
 
 ## API
 
-- `receiveVerificationSMS(callback)`
+- `listenForVerificationSms(callback)`
   - subscribes to `SMS_RECEIVED` and `SMS_ERROR`
 - `startSmsRetriever()`
   - starts Android SMS Retriever
 - `startSmsUserConsent(senderPhoneNumber?, userConsentRequestCode?)`
   - starts Android SMS User Consent flow
+- `removeVerificationListeners()`
+  - removes all active SMS listeners created by this library
+
+Backward-compatible aliases are still exported:
+
+- `receiveVerificationSMS(callback)`
 - `removeAllListeners()`
-  - removes active event listeners
+
+In most apps, prefer the `subscription.remove()` returned by
+`listenForVerificationSms()` over global listener cleanup.
 
 ## Notes
 

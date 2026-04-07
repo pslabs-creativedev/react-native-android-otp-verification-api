@@ -36,7 +36,7 @@ public class AndroidOtpVerificationApiModule extends ReactContextBaseJavaModule 
       new ActivityEventListener() {
         @Override
         public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
-          handleOnActivityResult(requestCode, resultCode, data);
+          handleActivityResult(requestCode, resultCode, data);
         }
 
         @Override
@@ -103,7 +103,13 @@ public class AndroidOtpVerificationApiModule extends ReactContextBaseJavaModule 
 
     IntentFilter intentFilter = new IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION);
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      context.registerReceiver(smsVerificationReceiver, intentFilter, RECEIVER_EXPORTED);
+      context.registerReceiver(
+          smsVerificationReceiver,
+          intentFilter,
+          SmsRetriever.SEND_PERMISSION,
+          null,
+          RECEIVER_EXPORTED
+      );
     } else {
       context.registerReceiver(
           smsVerificationReceiver,
@@ -118,6 +124,24 @@ public class AndroidOtpVerificationApiModule extends ReactContextBaseJavaModule 
   @Override
   public String getName() {
     return "AndroidOtpVerificationApi";
+  }
+
+  @Override
+  public void invalidate() {
+    ReactApplicationContext context = getReactApplicationContext();
+    context.removeActivityEventListener(activityEventListener);
+
+    try {
+      context.unregisterReceiver(smsVerificationReceiver);
+    } catch (IllegalArgumentException ignored) {
+      // Receiver may already be unregistered during teardown.
+    }
+
+    if (reactContext == context) {
+      reactContext = null;
+    }
+
+    super.invalidate();
   }
 
   @ReactMethod
@@ -166,7 +190,7 @@ public class AndroidOtpVerificationApiModule extends ReactContextBaseJavaModule 
         });
   }
 
-  private void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+  private void handleActivityResult(int requestCode, int resultCode, Intent data) {
     if (requestCode != userConsentRequestCode) {
       return;
     }
