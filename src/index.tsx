@@ -1,5 +1,19 @@
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 
+export type VerificationSmsCallback = (
+  error: Error | null,
+  message: string | null
+) => void;
+
+export type VerificationListenerSubscription = {
+  remove(): void;
+};
+
+export type StartUserConsentOptions = {
+  senderPhoneNumber?: string | null;
+  requestCode?: number;
+};
+
 const LINKING_ERROR =
   `The package 'react-native-android-otp-verification-api' doesn't seem to be linked. Make sure: \n\n` +
   Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
@@ -32,9 +46,13 @@ export const EmitterMessages = {
   SMS_ERROR: 'SMS_ERROR',
 } as const;
 
-export function listenForVerificationSms(
-  callback: (error: Error | null, message: string | null) => void
-) {
+export function isSupported(): boolean {
+  return Platform.OS === 'android';
+}
+
+export function listenForOtp(
+  callback: VerificationSmsCallback
+): VerificationListenerSubscription {
   if (!emitter) {
     return {
       remove() {},
@@ -71,7 +89,7 @@ export function listenForVerificationSms(
   };
 }
 
-export function startSmsRetriever(): Promise<boolean> {
+export function startRetriever(): Promise<boolean> {
   if (Platform.OS !== 'android') {
     return Promise.resolve(false);
   }
@@ -79,21 +97,26 @@ export function startSmsRetriever(): Promise<boolean> {
   return NativeOtpModule.startSmsRetriever();
 }
 
-export function startSmsUserConsent(
+function startSmsUserConsentNative(
   senderPhoneNumber: string | null = null,
-  userConsentRequestCode = 69
+  requestCode = 69
 ): Promise<boolean> {
   if (Platform.OS !== 'android') {
     return Promise.resolve(false);
   }
 
-  return NativeOtpModule.startSmsUserConsent(
-    senderPhoneNumber,
-    userConsentRequestCode
-  );
+  return NativeOtpModule.startSmsUserConsent(senderPhoneNumber, requestCode);
 }
 
-export function removeVerificationListeners() {
+export function startUserConsent(
+  options: StartUserConsentOptions = {}
+): Promise<boolean> {
+  const { senderPhoneNumber = null, requestCode = 69 } = options;
+
+  return startSmsUserConsentNative(senderPhoneNumber, requestCode);
+}
+
+export function removeOtpListeners() {
   if (!emitter) {
     return;
   }
@@ -107,15 +130,10 @@ export function removeVerificationListeners() {
   listenerSubscriptions.clear();
 }
 
-// Backward-compatible aliases for the previous public API.
-export const receiveVerificationSMS = listenForVerificationSms;
-export const removeAllListeners = removeVerificationListeners;
-
 export default {
-  listenForVerificationSms,
-  startSmsRetriever,
-  startSmsUserConsent,
-  removeVerificationListeners,
-  receiveVerificationSMS,
-  removeAllListeners,
+  isSupported,
+  listenForOtp,
+  startRetriever,
+  startUserConsent,
+  removeOtpListeners,
 };

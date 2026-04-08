@@ -30,9 +30,10 @@ npx react-native run-android
 import React, { useEffect, useState } from 'react';
 import { Button, Text, View } from 'react-native';
 import {
-  listenForVerificationSms,
-  startSmsRetriever,
-  startSmsUserConsent,
+  isSupported,
+  listenForOtp,
+  startRetriever,
+  startUserConsent,
 } from 'react-native-android-otp-verification-api';
 
 export default function Example() {
@@ -41,7 +42,7 @@ export default function Example() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const subscription = listenForVerificationSms((err, sms) => {
+    const subscription = listenForOtp((err, sms) => {
       if (err) {
         setError(err.message);
         return;
@@ -63,8 +64,16 @@ export default function Example() {
 
   return (
     <View>
-      <Button title="Start User Consent" onPress={() => startSmsUserConsent()} />
-      <Button title="Start Retriever" onPress={() => startSmsRetriever()} />
+      <Button
+        title="Start User Consent"
+        onPress={() => startUserConsent()}
+        disabled={!isSupported()}
+      />
+      <Button
+        title="Start Retriever"
+        onPress={() => startRetriever()}
+        disabled={!isSupported()}
+      />
       <Text>OTP: {otp}</Text>
       <Text>Message: {message}</Text>
       <Text>Error: {error}</Text>
@@ -75,27 +84,27 @@ export default function Example() {
 
 ## API
 
-- `listenForVerificationSms(callback)`
+- `isSupported()`
+  - returns `true` on Android and `false` on iOS
+- `listenForOtp(callback)`
   - subscribes to `SMS_RECEIVED` and `SMS_ERROR`
-- `startSmsRetriever()`
+- `startRetriever()`
   - starts Android SMS Retriever
-- `startSmsUserConsent(senderPhoneNumber?, userConsentRequestCode?)`
-  - starts Android SMS User Consent flow
-- `removeVerificationListeners()`
+- `startUserConsent(options?)`
+  - starts Android SMS User Consent flow with an object-based API
+- `removeOtpListeners()`
   - removes all active SMS listeners created by this library
 
-Backward-compatible aliases are still exported:
-
-- `receiveVerificationSMS(callback)`
-- `removeAllListeners()`
-
 In most apps, prefer the `subscription.remove()` returned by
-`listenForVerificationSms()` over global listener cleanup.
+`listenForOtp()` over global listener cleanup.
 
 ## Notes
 
 - Android only for native OTP functionality
 - Safe to import on iOS, but OTP methods are no-ops there
+- On iOS, `isSupported()` returns `false`
+- On iOS, `startRetriever()` and `startUserConsent()` resolve to `false`
+- On iOS, the listener APIs return a removable no-op subscription
 - This package does not support iOS OTP retrieval
 - SMS User Consent can work without app-hash formatting
 - SMS Retriever requires the OTP SMS to include the app hash
@@ -104,9 +113,9 @@ In most apps, prefer the `subscription.remove()` returned by
 
 ## Choosing a Flow
 
-- Use `startSmsUserConsent()` when your current OTP SMS text should remain
+- Use `startUserConsent()` when your current OTP SMS text should remain
   unchanged and you want the user to approve the message read.
-- Use `startSmsRetriever()` when your backend can include the app hash in the
+- Use `startRetriever()` when your backend can include the app hash in the
   SMS and you want silent OTP capture.
 
 ## Example OTP Regex

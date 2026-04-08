@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Button, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
-  listenForVerificationSms,
-  startSmsRetriever,
-  startSmsUserConsent,
+  isSupported,
+  listenForOtp,
+  startRetriever,
+  startUserConsent,
 } from 'react-native-android-otp-verification-api';
 
 export default function App() {
@@ -12,7 +13,7 @@ export default function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const subscription = listenForVerificationSms((err, sms) => {
+    const subscription = listenForOtp((err, sms) => {
       if (err) {
         setError(err.message);
         return;
@@ -43,12 +44,17 @@ export default function App() {
       <View style={styles.buttonGroup}>
         <Button
           title="Start User Consent"
-          onPress={() => startSmsUserConsent()}
+          onPress={() => startUserConsent()}
+          disabled={!isSupported()}
         />
       </View>
 
       <View style={styles.buttonGroup}>
-        <Button title="Start Retriever" onPress={() => startSmsRetriever()} />
+        <Button
+          title="Start Retriever"
+          onPress={() => startRetriever()}
+          disabled={!isSupported()}
+        />
       </View>
 
       <View style={styles.card}>
